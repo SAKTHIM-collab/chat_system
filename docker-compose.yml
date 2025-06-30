@@ -1,0 +1,55 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    container_name: chat_postgres_db
+    environment:
+      POSTGRES_DB: chat_db
+      POSTGRES_USER: chat_user
+      POSTGRES_PASSWORD: chat_password
+    volumes:
+      # This named volume will persist your database data
+      - chat_db_data:/var/lib/postgresql/data
+    ports:
+      # Only expose if you need to access PostgreSQL from host machine (e.g., for a GUI client)
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: ./server
+    container_name: chat_server
+    ports:
+      - "12345:12345" # Map server port to host
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chat_db}
+      POSTGRES_USER: ${POSTGRES_USER:-chat_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chat_password}
+      DB_HOST: db # This is the service name of the database container within the Docker network
+    depends_on:
+      db:
+        condition: service_healthy # Ensure DB is healthy before starting server
+    restart: always # Automatically restart if server crashes
+
+  # Optional: A client container for testing within Docker network
+  client:
+    build: ./client
+    container_name: chat_client
+    environment:
+      SERVER_HOST: server # Connects to the 'server' service in Docker network
+      SERVER_PORT: 12345
+    depends_on:
+      server:
+        condition: service_started
+    # No port mapping needed unless you want to interact with client from host outside Docker Desktop terminal.
+    # If you want to run multiple clients, you'd run multiple instances of this image.
+    # command: python src/client.py # Override CMD to run once or interactive session
+
+volumes:
+  chat_db_data:
+    # Use a named volume to ensure data persistence
