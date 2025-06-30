@@ -14,13 +14,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the server source code into the container
-COPY ./src /app/server/src
+COPY ./server/src /app/server/src
 
 # Set environment variables for database connection
-ENV POSTGRES_DB=chat_db
-ENV POSTGRES_USER=chat_user
-ENV POSTGRES_PASSWORD=chat_password
-ENV DB_HOST=db
+
 
 # Expose the port the server listens on
 EXPOSE 12345
